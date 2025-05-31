@@ -1,25 +1,33 @@
-
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import MainLayout from '@/components/layout/MainLayout';
 import ProductGrid from '@/components/products/ProductGrid';
 import ProductFilters from '@/components/products/ProductFilters';
-import ProductSort, { type SortOption } from '@/components/products/ProductSort';
-import { products as allProducts, categories as allCategories } from '@/lib/placeholder-data';
+import { products as allProducts, categories } from '@/lib/placeholder-data';
 import type { Product } from '@/lib/types';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Search } from 'lucide-react';
 
 export default function ProductsPage() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(allProducts);
-  const [activeFilters, setActiveFilters] = useState<{ category?: string; priceRange?: [number, number] }>({});
-  const [sortOption, setSortOption] = useState<SortOption>('popularity');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('popularity');
+  const [activeFilters, setActiveFilters] = useState<{
+    category?: string;
+    priceRange?: [number, number];
+  }>({});
+  const searchParams = useSearchParams();
 
-  const maxPrice = useMemo(() => {
-    return allProducts.reduce((max, p) => (p.price > max ? p.price : max), 0);
-  }, []);
+  useEffect(() => {
+    const category = searchParams.get('category');
+    if (category) {
+      setActiveFilters(prev => ({ ...prev, category }));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let productsToDisplay = [...allProducts];
@@ -66,44 +74,54 @@ export default function ProductsPage() {
     setFilteredProducts(productsToDisplay);
   }, [activeFilters, sortOption, searchTerm]);
 
-  const handleFilterChange = (filters: { category?: string; priceRange?: [number, number] }) => {
-    setActiveFilters(filters);
-  };
-  
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-  };
-
   return (
     <MainLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl mb-4">
-          Our Products
-        </h1>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search all products..."
-            className="w-full pl-10 pr-4 py-2 text-base"
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          <aside className="w-full md:w-64">
+            <ProductFilters
+              categories={categories}
+              onFilterChange={filters => setActiveFilters(filters)}
+              maxPrice={Math.max(...allProducts.map(p => p.price))}
+            />
+          </aside>
+
+          <main className="flex-1">
+            <div className="mb-8 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    type="search"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="w-full sm:w-48">
+                  <Select value={sortOption} onValueChange={setSortOption}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="popularity">Most Popular</SelectItem>
+                      <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                      <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                      <SelectItem value="name-asc">Name: A to Z</SelectItem>
+                      <SelectItem value="name-desc">Name: Z to A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <p className="text-muted-foreground">
+                Showing {filteredProducts.length} products
+              </p>
+            </div>
+
+            <ProductGrid products={filteredProducts} />
+          </main>
         </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside className="lg:col-span-1">
-          <ProductFilters 
-            categories={allCategories} 
-            onFilterChange={handleFilterChange}
-            maxPrice={maxPrice}
-            initialPriceRange={[0, maxPrice]}
-          />
-        </aside>
-        <section className="lg:col-span-3">
-          <ProductSort onSortChange={setSortOption} currentSort={sortOption} />
-          <ProductGrid products={filteredProducts} />
-        </section>
       </div>
     </MainLayout>
   );

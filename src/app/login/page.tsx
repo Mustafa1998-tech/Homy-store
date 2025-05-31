@@ -1,58 +1,128 @@
-
 "use client";
 
-import MainLayout from '@/components/layout/MainLayout';
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import Link from 'next/link';
-import { LogIn } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginPage() {
-  const handleSubmit = (e: React.FormEvent) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { signIn, signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt');
-    // On success, redirect to account page or previous page
+    try {
+      await signIn(email, password);
+      toast({
+        title: "تم تسجيل الدخول بنجاح",
+        description: "مرحباً بك في متجر هومي",
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: "يرجى التحقق من البريد الإلكتروني وكلمة المرور",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      toast({
+        title: "تم تسجيل الدخول بنجاح",
+        description: "مرحباً بك في متجر هومي",
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: "حدث خطأ أثناء تسجيل الدخول باستخدام Google",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <MainLayout>
-      <div className="container mx-auto px-4 py-12 flex justify-center items-center min-h-[calc(100vh-10rem)]">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
-            <CardDescription>Log in to access your account and orders.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="you@example.com" required />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="••••••••" required />
-              </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                <LogIn className="mr-2 h-4 w-4" /> Login
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col items-center text-sm">
-            <Link href="/forgot-password" passHref legacyBehavior>
-                <a className="text-primary hover:underline mb-2">Forgot your password?</a>
-            </Link>
-            <p>
-              Don't have an account?{' '}
-              <Link href="/register" passHref legacyBehavior>
-                <a className="font-medium text-primary hover:underline">Sign up</a>
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            تسجيل الدخول
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                البريد الإلكتروني
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="البريد الإلكتروني"
+                className="text-right"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                كلمة المرور
+              </label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="كلمة المرور"
+                className="text-right"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Button type="submit" className="w-full">
+              تسجيل الدخول
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">
+                أو تسجيل الدخول باستخدام
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <Button
+              onClick={handleGoogleSignIn}
+              variant="outline"
+              className="w-full"
+            >
+              <FcGoogle className="h-5 w-5 ml-2" />
+              تسجيل الدخول باستخدام Google
+            </Button>
+          </div>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }

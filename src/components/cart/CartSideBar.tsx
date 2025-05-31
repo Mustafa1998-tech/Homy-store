@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from "@/components/ui/sheet";
@@ -11,7 +10,7 @@ import Link from 'next/link';
 import { ShoppingCart, X } from "lucide-react";
 
 export default function CartSideBar() {
-  const { cartItems, isCartOpen, setIsCartOpen, getCartItemCount } = useCart();
+  const { cart, isCartOpen, setIsCartOpen, getCartItemCount } = useCart();
   const itemCount = getCartItemCount();
 
   return (
@@ -29,7 +28,7 @@ export default function CartSideBar() {
           </div>
         </SheetHeader>
         
-        {cartItems.length === 0 ? (
+        {cart.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-6">
             <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
             <p className="text-lg font-medium text-muted-foreground">Your cart is empty.</p>
@@ -42,9 +41,9 @@ export default function CartSideBar() {
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-grow p-6 pr-3"> {/* Adjusted padding for scrollbar */}
+            <ScrollArea className="flex-grow p-6 pr-3">
               <div className="space-y-4">
-                {cartItems.map(item => (
+                {cart.map(item => (
                   <CartItemDisplay key={item.product.id} item={item} />
                 ))}
               </div>

@@ -1,9 +1,9 @@
-
 import type { ReactNode } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import { Toaster } from "@/components/ui/toaster";
 import CartSideBar from '@/components/cart/CartSideBar';
+import WhatsAppButton from '@/components/ui/WhatsAppButton';
 
 type MainLayoutProps = {
   children: ReactNode;
@@ -18,6 +18,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       </main>
       <CartSideBar />
       <Footer />
+      <WhatsAppButton />
       <Toaster />
     </div>
   );

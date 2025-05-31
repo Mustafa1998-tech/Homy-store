@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams } from 'next/navigation';
@@ -11,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ShoppingCart, ArrowLeft, CheckCircle, Star } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import ProductGrid from '@/components/products/ProductGrid';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -22,15 +21,39 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [addedToCartFeedback, setAddedToCartFeedback] = useState(false);
 
-  useEffect(() => {
+  // Memoize product and related products
+  const { currentProduct, related } = useMemo(() => {
     const currentProduct = allProducts.find(p => p.slug === slug);
-    if (currentProduct) {
-      setProduct(currentProduct);
-      const related = allProducts.filter(p => p.category.id === currentProduct.category.id && p.id !== currentProduct.id).slice(0, 4);
-      setRelatedProducts(related);
-    }
+    const related = currentProduct
+      ? allProducts
+          .filter(p => p.category.id === currentProduct.category.id && p.id !== currentProduct.id)
+          .slice(0, 4)
+      : [];
+    return { currentProduct, related };
   }, [slug]);
 
+  useEffect(() => {
+    if (currentProduct) {
+      setProduct(currentProduct);
+      setRelatedProducts(related);
+      
+      // Preload related product images
+      if (typeof window !== 'undefined') {
+        related.forEach(product => {
+          const img = document.createElement('img');
+          img.src = product.imageUrl;
+        });
+      }
+    }
+  }, [currentProduct, related]);
+
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart(product);
+      setAddedToCartFeedback(true);
+      setTimeout(() => setAddedToCartFeedback(false), 2000);
+    }
+  };
 
   if (!product) {
     return (
@@ -45,104 +68,88 @@ export default function ProductDetailPage() {
     );
   }
 
-  const handleAddToCart = () => {
-    addToCart(product, quantity);
-    setAddedToCartFeedback(true);
-    setTimeout(() => setAddedToCartFeedback(false), 2000); // Reset feedback after 2 seconds
-  };
-
-  const handleQuantityChange = (change: number) => {
-    setQuantity(prev => Math.max(1, prev + change));
-  };
-
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
-        <Button variant="outline" onClick={() => window.history.back()} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          <Card className="overflow-hidden">
-            <div className="relative aspect-[4/5] w-full">
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-                priority
-                data-ai-hint={product.dataAiHint}
-              />
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="relative aspect-square">
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              fill
+              className="object-cover rounded-lg"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
+              data-ai-hint={product.dataAiHint}
+            />
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+              <p className="text-2xl font-semibold text-primary">EGP {product.price.toFixed(2)}</p>
             </div>
-          </Card>
 
-          <div className="flex flex-col justify-center">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-3xl lg:text-4xl font-bold">{product.name}</CardTitle>
-                <div className="flex items-center mt-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`h-5 w-5 ${i < Math.floor((product.popularity || 70) / 20) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                  ))}
-                  <span className="ml-2 text-sm text-muted-foreground">({ (product.popularity || 0) % 13 + 5} reviews)</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base text-foreground/80 leading-relaxed mt-2 mb-4">
-                  {product.description}
-                </CardDescription>
-                <p className="text-3xl font-semibold text-primary mb-6">
-                  EGP {product.price.toFixed(2)}
-                </p>
-                
-                <div className="flex items-center space-x-3 mb-6">
-                  <Label htmlFor="quantity" className="text-sm font-medium">Quantity:</Label>
-                  <div className="flex items-center border rounded-md">
-                    <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(-1)} className="h-8 w-8 rounded-r-none" aria-label="Decrease quantity">
-                      -
-                    </Button>
-                    <input 
-                      id="quantity"
-                      type="number" 
-                      value={quantity} 
-                      readOnly 
-                      className="w-12 h-8 text-center border-none focus:ring-0 bg-transparent" 
-                      aria-label="Current quantity"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => handleQuantityChange(1)} className="h-8 w-8 rounded-l-none" aria-label="Increase quantity">
-                      +
-                    </Button>
-                  </div>
-                </div>
+            <div className="flex items-center space-x-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-5 w-5 ${i < (product.popularity || 0) / 20 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                />
+              ))}
+              <span className="text-sm text-muted-foreground">
+                ({Math.round((product.popularity || 0) / 10)} reviews)
+              </span>
+            </div>
 
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  size="lg" 
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 transition-all duration-300 ease-in-out"
-                  onClick={handleAddToCart}
-                  disabled={addedToCartFeedback}
+            <p className="text-muted-foreground">{product.description}</p>
+
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <Button
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  variant="outline"
+                  size="icon"
                 >
-                  {addedToCartFeedback ? (
-                    <>
-                      <CheckCircle className="mr-2 h-5 w-5 animate-pulse" /> Added!
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
-                    </>
-                  )}
+                  -
                 </Button>
-              </CardFooter>
-            </Card>
+                <span className="text-lg font-medium">{quantity}</span>
+                <Button
+                  onClick={() => setQuantity(q => q + 1)}
+                  variant="outline"
+                  size="icon"
+                >
+                  +
+                </Button>
+              </div>
+
+              <Button
+                onClick={handleAddToCart}
+                className="w-full"
+                size="lg"
+                disabled={addedToCartFeedback}
+              >
+                {addedToCartFeedback ? (
+                  <span className="flex items-center">
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Added to Cart
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <ShoppingCart className="mr-2 h-5 w-5" />
+                    Add to Cart
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
         {relatedProducts.length > 0 && (
-          <section className="mt-16">
-            <h2 className="text-2xl font-bold mb-6">You Might Also Like</h2>
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold mb-8">Related Products</h2>
             <ProductGrid products={relatedProducts} />
-          </section>
+          </div>
         )}
       </div>
     </MainLayout>
